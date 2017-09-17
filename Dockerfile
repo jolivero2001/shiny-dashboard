@@ -1,6 +1,6 @@
 FROM r-base:latest
 
-MAINTAINER Flavio Barros "jolivero2001@yahoo.com"
+MAINTAINER "jolivero2001@yahoo.com"
 
 RUN apt-get update && apt-get install -y \
     sudo \
