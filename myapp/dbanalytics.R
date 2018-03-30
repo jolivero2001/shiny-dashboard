@@ -27,9 +27,9 @@ plotDataHis <- list(20)
 
 listTitle <- matrix(NA,nrow=10,ncol=6,byrow=TRUE)
 
-conn <- dbConnect(drv = RMySQL::MySQL(),dbname = "moodle",host = "localhost",
-    username = "root",password = "root")
-    on.exit(dbDisconnect(conn), add = TRUE)
+#conn <- dbConnect(drv = RMySQL::MySQL(),dbname = "moodle",host = "localhost",
+#    username = "root",password = "root")
+#    on.exit(dbDisconnect(conn), add = TRUE)
 
 clean_plot <-function(output,nPlot)
 {
@@ -507,7 +507,7 @@ shinyApp(
    show(id="MoodleData")  
    hide(id="Source")  
    
-   dat.moodle <- dbReadTable(conn = conn,  name = input$MoodleData)
+   ###dat.moodle <- dbReadTable(conn = conn,  name = input$MoodleData)
   } 
  
   if ( input$filter1Variable =="Join" )
@@ -545,7 +545,7 @@ shinyApp(
   {
    show(id="MoodleData1")
    hide(id="Source1") 
-   dat1.moodle <- dbReadTable(conn = conn,  name = input$MoodleData1)
+   ####dat1.moodle <- dbReadTable(conn = conn,  name = input$MoodleData1)
   } 
   
   
