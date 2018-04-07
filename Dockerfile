@@ -22,7 +22,10 @@ RUN wget --no-verbose https://s3.amazonaws.com/rstudio-shiny-server-os-build/ubu
 RUN R -e "install.packages(c('shiny', 'ggplot2', 'ggvis', 'shinydashboard', 'dplyr','dbConnect','shinyjs','lazyeval','shinyAce','knitr'), repos='http://cran.rstudio.com/')"
 
 COPY shiny-server.conf  /etc/shiny-server/shiny-server.conf
-COPY /myapp /srv/shiny-server/
+
+CMD ["cd /usr/bin/shiny-server"]
+CMD ["mkdir uned"]
+COPY /myapp /srv/shiny-server/uned/
 
 EXPOSE 80
 
