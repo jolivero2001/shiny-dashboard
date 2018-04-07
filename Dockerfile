@@ -19,8 +19,7 @@ RUN wget --no-verbose https://s3.amazonaws.com/rstudio-shiny-server-os-build/ubu
     gdebi -n ss-latest.deb && \
     rm -f version.txt ss-latest.deb
 
-RUN 
-R -e "install.packages(c('shiny', 'ggplot2', 'ggvis', 'shinydashboard', 'dplyr','shinyjs','lazyeval','shinyAce','knitr'), repos='http://cran.rstudio.com/')"
+RUN R -e "install.packages(c('shiny', 'ggplot2', 'ggvis', 'shinydashboard', 'dplyr','shinyjs','lazyeval','shinyAce','knitr'), repos='http://cran.rstudio.com/')"
 
 COPY shiny-server.conf  /etc/shiny-server/shiny-server.conf
 
