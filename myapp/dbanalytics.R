@@ -229,7 +229,7 @@ layer_uned <- function(v,layer,tsize,tfill,vdata)
   )
  )  
 
-runApp(
+####runApp(
 shinyApp(
   ui = dashboardPage(
   dashboardHeader(title = Sys.Date(),mm,tm),
@@ -1052,5 +1052,6 @@ observe ({
                   
 })
 
-}))
+})
+	 ####)
 #,launch.browser=TRUE)
