@@ -1,0 +1,4 @@
+Points;Histogram;Segmentation;BarChar;KDE;Regresion-loess;Regresion-lm;Regresion+;Boxplot;Paths;Anova;Lines;Points;Points;Points;Paths;Paths;Text;Correlation;Histogram
+layer_points();layer_histograms();layer_densities()
+layer_points();layer_histograms();layer_densities()
+layer_points();layer_histograms();layer_densities()
