@@ -20,7 +20,7 @@ RUN wget --no-verbose https://s3.amazonaws.com/rstudio-shiny-server-os-build/ubu
     rm -f version.txt ss-latest.deb
 
 #RUN sudo apt-get install libmysqlclient-dev
-RUN R -e "install.packages(c('shiny', 'ggplot2', 'ggvis', 'shinydashboard', 'dplyr','shinyjs','lazyeval','shinyAce','knitr'), repos='http://cran.rstudio.com/')"
+RUN R -e "install.packages(c('shiny', 'ggplot2', 'ggvis', 'shinydashboard', 'dbConnect','tidyr','corrplot','dplyr','shinyjs','lazyeval','shinyAce','knitr'), repos='http://cran.rstudio.com/')"
 
 COPY shiny-server.conf  /etc/shiny-server/shiny-server.conf
 
