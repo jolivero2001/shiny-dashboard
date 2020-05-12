@@ -27,6 +27,7 @@ COPY shiny-server.conf  /etc/shiny-server/shiny-server.conf
 CMD ["cd /usr/bin/shiny-server"]
 CMD ["mkdir uned"]
 COPY /myapp /srv/shiny-server/uned/
+COPY /GenGraph /srv/shiny-server/uned/
 
 EXPOSE 80
 
