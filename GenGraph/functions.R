@@ -21,7 +21,7 @@ has_Color <- function(graph)
 has_Size <- function(graph)
 {
   has_Size <- TRUE
-  if (graph == 'Histogram' || graph == 'Paths' || graph == 'Regresion.loess' || graph == 'Boxplot' || graph=='Text' || graph=='Lines' || graph=='BarChar' || graph=='Regresion.lm')
+  if (graph == 'Histogram' || graph == 'Paths' || graph == 'Regresion.loess' || graph == 'Boxplot' || graph =='Text' || graph=='Lines' || graph=='BarChar' || graph=='Regresion.lm')
   {
     has_Size <-FALSE
   } 
@@ -38,6 +38,19 @@ has_Shape <- function(graph)
   return(has_Shape)  
 
 }
+
+
+is.analytics <- function(graph)
+{
+  is.analytics <- FALSE 
+  if (graph == 'Correlation' || graph == 'Segmentation' || graph == '1way Anova' || graph == '2way Anova' || graph =='Facet.Wrap' || graph =='Facet.Grid' || graph =='Regresion')
+  {
+   is.analytics <- TRUE
+  } 
+  return(is.analytics)
+}
+
+
 clean_plot <-function(output,nPlot)
 {
 
@@ -71,12 +84,43 @@ clean_plot <-function(output,nPlot)
       print("")
    })
 
-  }   
+  }    
 }
 
+drawPlot <- function(v,plot,input,data,index)
+{
+ 
+ v %>% layer_f(function(v)
+ {
+
+  if (plot == 'Histogram')
+ {
+   v %>% ggplot(data,aes(x)) + geom_histogram() + xlab(input[[paste0("x",index)]])
+ } else if (plot == 'Points')
+ {
+   v %>% ggplot(data,aes(x,y)) + geom_point() + xlab(input[[paste0("x",index)]]) + ylab(input[[paste0("y",index)]])
+ } else if (plot == 'Boxplot')
+ {
+   v %>% ggplot(data,aes(x,y)) + geom_boxplot() + xlab(input[[paste0("x",index)]]) + ylab(input[[paste0("y",index)]]) 
+   sp <- sp + geom_jitter(alpha = 0.3, color = "tomato")
+ } else if (plot == 'Regresion')
+ {
+    v %>% ggplot(data,aes(x,y)) + geom_smooth() + xlab(input[[paste0("x",index)]]) + ylab(input[[paste0("y",index)]])
+ } else if (plot == 'Line')
+ {
+    v %>% ggplot(data,aes(x,y)) + geom_rect() + xlab(input[[paste0("x",index)]]) + ylab(input[[paste0("y",index)]])
+ } else if (plot == 'Violin')
+ {
+    v %>% ggplot(data,aes(x,y)) + geom_violin() + xlab(input[[paste0("x",index)]]) + ylab(input[[paste0("y",index)]]) + labs(title="Iris") 
+    sp <- sp + geom_jitter(alpha = 0.3, color = "tomato")
+ } 
+
+  return(sp)
+ }) 
+}
 
    
-layer_generic <- function(v,layer,vdata,indLayer,input,session)  
+layer_generic <- function(v,layer,vdata,vDataF,indLayer,input,session)  
   {
     
     xVar <- vdata$x
@@ -86,7 +130,7 @@ layer_generic <- function(v,layer,vdata,indLayer,input,session)
 
     
     
-    if (substr(layer,1,6) == 'Points' || layer == 'Segmentation' || layer == 'Facet.Wrap'|| layer == 'Facet.Grid')
+    if (substr(layer,1,6) == 'Points' || layer == 'Segmentation' || layer == 'Facet.Wrap'|| layer == 'Facet.Grid' || layer == 'Heatmap' || layer =='Correlation')
     {
      
      
@@ -122,7 +166,8 @@ layer_generic <- function(v,layer,vdata,indLayer,input,session)
      
     } else if (substr(layer,1,9) == 'Histogram')
     {
-     
+     if ((indLayer > 1 && is.numeric(vDataF[[indLayer-1]]$y)) || indLayer == 1)
+     {       
       v %>% layer_f(function(v) {
         if (is.numeric(xVar))
         {
@@ -143,7 +188,17 @@ layer_generic <- function(v,layer,vdata,indLayer,input,session)
          }  
         }
       }) 
-           
+     } else
+     {
+       if (is.numeric(yVar))
+         {  
+          v %>% add_props(~x,~y) %>% layer_bars()
+         } else 
+         {
+          v %>% add_props(~x,~y) %>% layer_points() 
+         }  
+     }
+      
     } else if (layer == 'KDE')
     {
      v %>% layer_f(function(v) {
@@ -188,7 +243,7 @@ layer_generic <- function(v,layer,vdata,indLayer,input,session)
       mod <- try(loess.smooth(xVar, yVar)) 
       if(inherits(mod, "try-error"))
       
-      {
+        {
        v %>%add_props(~x,~y) %>% layer_points()  
       }  else
       {      
@@ -316,13 +371,24 @@ dataSourceGeneric = function(indLayer,Level,input)
      if (input[[ndat]] == 'moodle' && !is.null(input[[nData]]))
      {
       
-      conn <- dbConnect(drv = RMySQL::MySQL(),dbname = "moodle",host = "localhost",
-                       username = "root",password = "root")
-       #on.exit(dbDisconnect(conn), add = TRUE)
-       
+      #conn <- dbConnect(drv = RMySQL::MySQL(),dbname = "bitnami_moodle",host = "localhost",
+       #                username = "root")
+      ###on.exit(dbDisconnect(conn), add = TRUE)
       
-      dat.moodle <- dbReadTable(conn = conn,  name = input[[nData]]) 
-      dbDisconnect(conn)
+      if (input[[nData]] == 'StudentsbyCourse')
+      { 
+        dat.moodle <- dbGetQuery(conn,Query1)
+      } else if (input[[nData]] == 'GradesbyStudent')
+      {
+        dat.moodle <- dbGetQuery(conn,Query2)
+      } else if (input[[nData]] == 'Survey') 
+      {
+        dat.moodle <- dbGetQuery(conn,Query3)
+      } else
+      {      
+        dat.moodle <- dbReadTable(conn = conn,  name = input[[nData]])
+      } 
+      #dbDisconnect(conn)
      } 
    
    } else
@@ -352,8 +418,8 @@ dataSourceGeneric = function(indLayer,Level,input)
 
     if (any(input[["gVariable"]] == "Correlation") && !is.null(dat.moodle))
     {
-          corvdata<-cor(dat.moodle[sapply(dat.moodle,is.numeric)])
-          dat.moodle <- melt(corvdata)           
+          ###corvdata<-cor(dat.moodle[sapply(dat.moodle,is.numeric)])
+          ###dat.moodle <- melt(corvdata)           
     }
 
     if (is.numeric(dat.moodle$y) && any(input[[paste0("filter2Variable",indLayer)]] == "Scale-Y"))
@@ -414,13 +480,23 @@ dataSource = function(indLayer,Level,input)
      if (input[[ndat]] == 'moodle' && !is.null(input[[nData]]))
      {
       
-      conn <- dbConnect(drv = RMySQL::MySQL(),dbname = "moodle",host = "localhost",
-                       username = "root",password = "root")
+      #conn <- dbConnect(drv = RMySQL::MySQL(),dbname = "bitnami_moodle",host = "localhost",
+       #                username = "root")
       #on.exit(dbDisconnect(conn), add = TRUE)
-      
-      
-      dat.moodle <- dbReadTable(conn = conn,  name = input[[nData]]) 
-      dbDisconnect(conn)
+     if (input[[nData]] == 'StudentsbyCourse')
+      { 
+        dat.moodle <- dbGetQuery(conn,Query1)
+      } else if (input[[nData]] == 'GradesbyStudent')
+      {
+        dat.moodle <- dbGetQuery(conn,Query2)
+      } else if (input[[nData]] == 'Survey')
+      {
+        dat.moodle <- dbGetQuery(conn,Query3) 
+      } else
+      {      
+        dat.moodle <- dbReadTable(conn = conn,  name = input[[nData]])
+      }
+      #dbDisconnect(conn)
      } 
    
    } else
@@ -483,12 +559,21 @@ dataSource = function(indLayer,Level,input)
      if (input[[ndat]] == 'moodle' && !is.null(input[[nData]]))
        {
       
-      conn <- dbConnect(drv = RMySQL::MySQL(),dbname = "moodle",host = "localhost",
-                       username = "root",password = "root")
+      #conn <- dbConnect(drv = RMySQL::MySQL(),dbname = "bitnami_moodle",host = "localhost",
+       #                username = "root")
        #on.exit(dbDisconnect(conn), add = TRUE)
       
-      dat.moodle <- dbReadTable(conn = conn,  name = input[[nData]]) 
-      dbDisconnect(conn)
+      if (input[[nData]] == 'StudentsbyCourse')
+      { 
+        dat.moodle <- dbGetQuery(conn,Query1)
+      } else if (input[[nData]] == 'GradesbyStudent')
+      {
+        dat.moodle <- dbGetQuery(conn,Query2)
+      } else
+      {      
+        dat.moodle <- dbReadTable(conn = conn,  name = input[[nData]])
+      }
+      #dbDisconnect(conn)
      } 
    
    } else
@@ -520,8 +605,8 @@ dataSource = function(indLayer,Level,input)
 
     if (any(input[["gVariable"]] == "Correlation") && !is.null(dat.moodle))
     {
-          corvdata<-cor(dat.moodle[sapply(dat.moodle,is.numeric)])
-          dat.moodle <- melt(corvdata)           
+          #corvdata<-cor(dat.moodle[sapply(dat.moodle,is.numeric)])
+            #dat.moodle <- melt(corvdata)           
     } 
 
    
@@ -535,29 +620,47 @@ dataSource = function(indLayer,Level,input)
  plotDataGeneric = function(inputx,inputy,inputf,inputgr,inputColor,inputSize,inputStroke,inputShape,inputText,input,dataS,indLayer)
  { 
    
-  if(any(inputx %in% names(dataS)) & any(inputy %in% names(dataS)) & any(inputf %in% names(dataS)) & any(inputgr %in% names(dataS))) 
+  inputFacet <- input[[paste0("Facet",indLayer)]]
+  if (is.null(inputFacet))
+  {
+   if (indLayer == 1)
+   { 
+    inputFacet <- inputx
+   } else
+   {
+    inputFacet <- input[[paste0("Facet",indLayer-1)]]
+   } 
+  } 
+
+  inputFactor2 <- input[["Factor2"]]
+  if (is.null(inputFactor2))
+  {
+   inputFactor2 <- inputx
+  } 
+
+  if(any(inputx %in% names(dataS)) & any(inputy %in% names(dataS)) & any(inputFacet %in% names(dataS)) & any(inputf %in% names(dataS)) & any(inputgr %in% names(dataS)) & any(inputFactor2 %in% names(dataS)) ) 
    {   
         
     
-    df <- subset(dataS, select = c(inputx,inputy,inputf,inputgr))
+    df <- subset(dataS, select = c(inputx,inputy,inputFacet,inputFactor2,inputf,inputgr))
       
     
-    names(df) <- c("x","y","f","g")
+    names(df) <- c("x","y","Facet","Factor2","f","g")
 
     if(any(inputf %in% names(dataS)))
     { 
         
      nSel <- length(inputf) 
      vartemp<-paste0("f",indLayer)
-     names(df)[3] <-vartemp  
+     names(df)[5] <-vartemp  
      if (nSel > 1)
      {
       for (index in 2:nSel) 
       { 
        vartemp<-paste0("f",indLayer)
-       names(df)[2 +index] <-paste0(vartemp,index)
+       names(df)[4+index] <-paste0(vartemp,index)
       } 
-      names(df)[2 +nSel+1] <-"g"
+      names(df)[4+nSel+1] <-"g"
      } 
     }
      
@@ -570,7 +673,7 @@ dataSource = function(indLayer,Level,input)
      {
       for (index in 2:nSelg) 
       { 
-       names(df)[2 + nSel + index] <-paste0("g",index-1)
+       names(df)[4 + nSel + index] <-paste0("g",index)
       } 
        
     } 
@@ -586,15 +689,15 @@ dataSource = function(indLayer,Level,input)
      {
       
         
-       df[2+nSel+nSelg+1] <- subset(dataS, select = c(inputColor))
+       df[4+nSel+nSelg+ind+1] <- subset(dataS, select = c(inputColor))
        
-       names(df)[2+nSel+nSelg+1]<-'Color'
+       names(df)[4+nSel+nSelg+ind+1]<-'Color'
        ind<-ind+1 
       }
      } else if (is.null(input[[paste0("oVariable",indLayer)]]) || is.null(inputColor) || !any(input[[paste0("oVariable",indLayer)]] == "Color"))
      {
-      df[2+nSel+nSelg+1] <- subset(dataS, select = c(inputx))  
-      names(df)[2+nSel+nSelg+1]<-'Color'
+      df[4+nSel+nSelg+ind+1] <- subset(dataS, select = c(inputx))  
+      names(df)[4+nSel+nSelg+ind+1]<-'Color'
       ind<-ind+1       
      }
     
@@ -604,15 +707,15 @@ dataSource = function(indLayer,Level,input)
      if (any(input[[paste0("oVariable",indLayer)]] == 'Size'))
      {
         
-      df[2+nSel+nSelg+ind+1] <- subset(dataS, select = c(inputSize))
-      names(df)[2+nSel+nSelg+ind+1]<-'Size' 
+      df[4+nSel+nSelg+ind+1] <- subset(dataS, select = c(inputSize))
+      names(df)[4+nSel+nSelg+ind+1]<-'Size' 
       ind<-ind+1
      }
     } else if (is.null(input[[paste0("oVariable",indLayer)]]) || is.null(inputSize) || !any(input[[paste0("oVariable",indLayer)]] == "Size"))
      {
       
-      df[2+nSel+nSelg+ind+1] <- subset(dataS, select = c(inputx))  
-      names(df)[2+nSel+nSelg+ind+1]<-'Size'
+      df[4+nSel+nSelg+ind+1] <- subset(dataS, select = c(inputx))  
+      names(df)[4+nSel+nSelg+ind+1]<-'Size'
       ind<-ind+1       
       }
 
@@ -621,15 +724,15 @@ dataSource = function(indLayer,Level,input)
      if (any(input[[paste0("oVariable",indLayer)]] == "Shape"))
      {
        
-      df[2+nSel+nSelg+ind+1] <- subset(dataS, select = c(inputShape))
-      names(df)[2+nSel+nSelg+ind+1]<-'Shape' 
+      df[4+nSel+nSelg+ind+1] <- subset(dataS, select = c(inputShape))
+      names(df)[4+nSel+nSelg+ind+1]<-'Shape' 
       ind<-ind+1
      }
     } else if (is.null(input[[paste0("oVariable",indLayer)]]) || is.null(inputShape) || !any(input[[paste0("oVariable",indLayer)]] == "Shape"))
      {
       
-      df[2+nSel+nSelg+ind+1] <- subset(dataS, select = c(inputx))  
-      names(df)[2+nSel+nSelg+ind+1]<-'Shape'
+      df[4+nSel+nSelg+ind+1] <- subset(dataS, select = c(inputx))  
+      names(df)[4+nSel+nSelg+ind+1]<-'Shape'
       ind<-ind+1       
       }
 
@@ -638,38 +741,38 @@ dataSource = function(indLayer,Level,input)
      if (any(input[[paste0("oVariable",indLayer)]] == "Stroke"))
      {
         
-       df[2+nSel+nSelg+ind+1] <- subset(dataS, select = c(inputStroke))
-      names(df)[2+nSel+nSelg+ind+1]<-'Stroke' 
+       df[4+nSel+nSelg+ind+1] <- subset(dataS, select = c(inputStroke))
+      names(df)[4+nSel+nSelg+ind+1]<-'Stroke' 
       ind<-ind+1
      }
     } else if (is.null(input[[paste0("oVariable",indLayer)]]) || is.null(inputStroke) || !any(input[[paste0("oVariable",indLayer)]] == "Stroke"))
      {
       
-      df[2+nSel+nSelg+ind+1] <- subset(dataS, select = c(inputx))  
-      names(df)[2+nSel+nSelg+ind+1]<-'Stroke'
+      df[4+nSel+nSelg+ind+1] <- subset(dataS, select = c(inputx))  
+      names(df)[4+nSel+nSelg+ind+1]<-'Stroke'
       ind<-ind+1       
       } 
 
    if(any(inputText %in% names(dataS)))
     {
      if (any(input[[paste0("oVariable",indLayer)]] == "Texting") || any(input$gVariable == "Text"))
-     {
-      df[2+nSel+nSelg+ind+1] <- subset(dataS, select = c(inputText))
-      names(df)[2+nSel+nSelg+ind+1]<-'Text' 
+      {
+      df[4+nSel+nSelg+ind+1] <- subset(dataS, select = c(inputText))
+      names(df)[4+nSel+nSelg+ind+1]<-'Text' 
       ind<-ind+1
      }
     }  else if (is.null(input[[paste0("oVariable",indLayer)]]) || is.null(inputText) || !any(input[[paste0("oVariable",indLayer)]] == "Text"))
     {
       
-      df[2+nSel+nSelg+ind+1] <- subset(dataS, select = c(inputx))  
-      names(df)[2+nSel+nSelg+ind+1]<-'Text'
+      df[4+nSel+nSelg+ind+1] <- subset(dataS, select = c(inputx))  
+      names(df)[4+nSel+nSelg+ind+1]<-'Text'
       ind<-ind+1       
     } 
 
     jx=0
     jy=0
 
-    if (any(input[[paste0("filter2Variable",indLayer)]] == "Jittering"))  
+    if (input$checkJitter)  
     { 
       if (is.numeric(df$x) && is.numeric(df$y))
       {
@@ -683,9 +786,40 @@ dataSource = function(indLayer,Level,input)
     
    
     return(df)
+    
    }
   }  
 
+ appl_filter = function(data,sfilter,index,input,indLayer)
+ {
+  sfilter_ <- rlang::parse_expr(sfilter)
+  message("filter statement: `", sfilter_, "`.")
+  cols <- data %>% names()                                
+  filcol <- cols[index+3]
+  vartemp1 <- paste0("ff",indLayer)
+  print('pasa')
+  data <- data %>%
+    dplyr::filter(!!sfilter_)
+
+  return(data)
+ }  
+
+ controlLabels = function(input,label,label1)
+ {
+  if (any(input$aVariable == "1way Anova")) 
+  {
+   label <- "factor 1"
+      
+  } else if (any(input$aVariable == "2way Anova")) 
+  {
+   
+                    label <- "factor 1" 
+                    label1<- "factor 2"        
+  } else if (any(substr(input$gVariable,1,5) == "Facet"))
+  {
+   label1 <- "Facet"    
+  }     
+ } 
 
  controlViewObjects = function(input,output,session)
  {
@@ -715,18 +849,18 @@ dataSource = function(indLayer,Level,input)
   }
   
   
- if (any(input$filterVariable == "Editor")) 
+ if (input$tabs2 == "Analytics") 
  {
    show(id="ace")
    show(id="eval")
 
  } else
  {
-   #clean_plot(output,3)
+   ##clean_plot(output,3)
    hide(id="ace")
-   hide(id="eval")
+  hide(id="eval")
  } 
-  
+   
  
   if (any(input$filterVariable == "Filter") || any(input$gVariable == "Regresion.loess") || any(input$gVariable == "Histogram")
     || any(input$filterVariable == 'Group+') || any(input$gVariable == "Regresion.lm") 
@@ -738,22 +872,30 @@ dataSource = function(indLayer,Level,input)
     hide(id = "p_ui", anim = TRUE)
   }
 
-   if (any(input$gVariable == "Anova")) 
+   if (any(input$aVariable == "1way Anova")) 
   {
-    #updateTextInput(session, "xVariable", 
-    #                label = "factor")
-    #updateTextInput(session, "yVariable", 
-    #                label = "muestra") 
-     
+    updateSelectInput(session, "x1", 
+                    label = "factor 1")
+    hide(id="Facet")
+      
+  } else if (any(input$aVariable == "2way Anova")) 
+  {
+    show(id="Facet")
+    updateSelectInput(session, "x1", 
+                    label = "factor 1")
+    updateSelectInput(session, "Facet", 
+                    label = "factor 2")        
+  } else if (any(substr(input$gVariable,1,5) == "Facet"))
+  {
+   updateSelectInput(session, "Facet", 
+                    label = "Facet")
+   show(id="Facet")  
+    
+    
   } else
   {
-   
-    #updateTextInput(session, "xVariable", 
-    #                label = "Axe X Variable:")
-    #updateTextInput(session, "yVariable", 
-    #                label = "Axe y Variable:")
-    
-  }   
+    hide(id="Facet")
+  }    
 
  } 
-  
+     

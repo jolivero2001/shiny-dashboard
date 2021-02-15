@@ -3,7 +3,7 @@ library(ggvis)
 library(shiny)
 library(dplyr)
 library(ggplot2) 
-library(dbConnect)
+library(DBI)
 library(shinyjs)
 library(lazyeval)
 library(shinyAce)
@@ -11,7 +11,9 @@ library(knitr)
 library(tidyr)
 library(corrplot)
 library(reshape2)  
-
+library(ggraph)
+library(data.tree)
+library(manipulate)
 
   source("functions.R")
   source("functionsRender.R")
@@ -21,12 +23,28 @@ library(reshape2)
  server <- function(input, output,session) 
 {
 
-  domains <- reactiveValues(x = c(NA,NA),y = c(NA,NA))
+  ###domains <- reactiveValues(x = c(NA,NA),y = c(NA,NA))
     
- lb <- linked_brush(keys = NULL, "blue")  
+ ####lb <- linked_brush(keys = NULL, "blue")  
 
+ ranges <- reactiveValues(x = NULL, y = NULL)
+ 
+ observeEvent(input$plots_dblclick, {
+    brush <- input$plots_brush
+    if (!is.null(brush)) {
+      ranges$x <- c(brush$xmin, brush$xmax)
+      ranges$y <- c(brush$ymin, brush$ymax)
+
+    } else {
+      ranges$x <- NULL
+      ranges$y <- NULL
+    }
+  })
+
+ 
  observe ({
    RenderDynamicObjects(input,output,session)
+   
  })  
  
  observe ({
@@ -38,47 +56,56 @@ library(reshape2)
    req(input$gVariable)
    if (any(input$gVariable == 'Correlation'))
    {
-      updateTabItems(session,"tabs",selected="Variable")
-    }
+    updateTabItems(session,"tabs",selected="Variable")
+   }
 })
 
- observe ({  
-   req(input$gVariable)
-   controlViewObjects(input,output,session)    
+ observe ({
+   controlViewObjects(input,output,session)
  })
 
  observe ({  
 
  req(input$gVariable)
- 
+  
+
  vsize <- 0
  vshape <- 0
  line<-NULL 
  line<-paste0(line,"\n")
  
+
  for (i in 1:input$number) { 
  
  local({ 
   
   my_i <- i   
-   
+  
+  plotname <- paste("plot",my_i,sep="")
+ 
   if (input$plotActive == my_i)
   {
    
-    plotname <- paste("plot",my_i,sep="")
+    
     plot <- paste0("plotname<-","'",sep="") 
     plot <- paste0(plot,plotname,sep="")
     plot <- paste0(plot,"'",sep="") 
-    line<-paste0(line,plot,"\n")
+   
     
     for (indLayer in 1:length(input$gVariable))
     {
         level<-paste0("indLayer<-",indLayer) 
+
+
+##
         line<-paste0(line,level,"\n")
+##
         graph <- input$gVariable[indLayer]
-        line<-paste0(line,"graph <- input$gVariable[indLayer]","\n")
+       
         dataS <-dataSourceGeneric(indLayer,1,input)
+##
         line<-paste0(line,'dataS <-dataSourceGeneric(indLayer,1,input)','\n')
+##
         if ( input$filter1Variable =="Join" )
         {
           dataS <- merge(dataS,dataSourceGeneric(indLayer,2,input),all=TRUE)       
@@ -86,30 +113,30 @@ library(reshape2)
         { 
          dataS <- Reduce(function(...) merge(...), list(dataS, dataSourceGeneric(indLayer,2,input)))   
         } 
-           
-        vdata<-plotDataGeneric(input[[paste0("x",indLayer)]],input[[paste0("y",indLayer)]],input[[paste0("f",indLayer)]],input[[paste0("g",indLayer)]],input[[paste0("Color",indLayer)]],input[[paste0("Size",indLayer)]],input[[paste0("Stroke",indLayer)]],input[[paste0("Shape",indLayer)]],input[[paste0("Text",indLayer)]],input,dataS,indLayer)
 
-        line<-paste0(line,'vdata<-plotDataGeneric(input[[paste0("x",indLayer)]],input[[paste0("y",indLayer)]],input[[paste0("f",indLayer)]],input[[paste0("g",indLayer)]],input[[paste0("Color",indLayer)]],input[[paste0("Size",indLayer)]],input[[paste0("Stroke",indLayer)]],input[[paste0("Shape",indLayer)]],input[[paste0("Text",indLayer)]],input,dataS,indLayer)','\n')
-
+        if (!is.analytics(input$gVariable[indLayer]))
+        {   
+         vdata<-plotDataGeneric(input[[paste0("x",indLayer)]],input[[paste0("y",indLayer)]],input[[paste0("f",indLayer)]],input[[paste0("g",indLayer)]],input[[paste0("Color",indLayer)]],input[[paste0("Size",indLayer)]],input[[paste0("Stroke",indLayer)]],input[[paste0("Shape",indLayer)]],input[[paste0("Text",indLayer)]],input,dataS,indLayer)
+##
+         line<-paste0(line,'vdata<-plotDataGeneric(input[[paste0("x",indLayer)]],input[[paste0("y",indLayer)]],input[[paste0("f",indLayer)]],input[[paste0("g",indLayer)]],input[[paste0("Color",indLayer)]],input[[paste0("Size",indLayer)]],input[[paste0("Stroke",indLayer)]],input[[paste0("Shape",indLayer)]],input[[paste0("Text",indLayer)]],input,dataS,indLayer)','\n')
+##      
+        }
        if(!is.null(vdata))
-       {                               
+       { 
+                                    
         if (indLayer == 1)
-        {
-         line<-paste0(line,'datsumm <- list(1) ','\n') 
-         datsumm <-  vdata  
-         line<-paste0(line,'datsumm <- vdata','\n')       
-         datsumm <- datsumm %>%  ggvis(fill.brush:='red') 
-         line<-paste0(line,"datsumm <- datsumm %>%  ggvis(fill.brush:='red',na.rm=TRUE)","\n") 
-             
+        {       
+         datsumm <- ggplot()    
          
-        } else
+        } else if (indLayer == 99999)
         {
-         datsumm <- datsumm %>% add_props(inherit=FALSE)
+         ####datsumm <- datsumm %>% add_props(inherit=FALSE)
          line<- paste0(line,"datsumm <- datsumm %>% add_props(inherit=FALSE)","\n")
 # control countables
          if (is.numeric(vDataF[[indLayer-1]]$x) && !is.numeric(vdata$x))
          {
-          vdata$x <- as.numeric(vdata$x)  
+          vdata$x <- as.numeric(as.character(vdata$x))  
+           
           line <- paste0(line,'vdata$x <- as.numeric(vdata$x)','\n')          
          } else if (!is.numeric(vDataF[[indLayer-1]]$x) && is.numeric(vdata$x))
          {
@@ -119,7 +146,7 @@ library(reshape2)
        
          if (is.numeric(vDataF[[indLayer-1]]$y) && !is.numeric(vdata$y))
          {
-          vdata$y <- as.numeric(vdata$y) 
+          vdata$y <- as.numeric(as.character(vdata$y)) 
           line <- paste0(line,'vdata$y <- as.numeric(vdata$y)','\n')         
          } else if (!is.numeric(vDataF[[indLayer-1]]$y) && is.numeric(vdata$y))
          {
@@ -128,12 +155,11 @@ library(reshape2)
          }
              
 
-         datsumm <- datsumm %>% add_data(vdata)
+         ####datsumm <- datsumm %>% add_data(vdata)
          line <- paste0(line,'datsumm <- datsumm %>% add_data(vdata)','\n') 
         }
 
         
-       
                   
         nSel <- 0
         if (any(input$filterVariable == "Filter")) 
@@ -148,130 +174,67 @@ library(reshape2)
         }  
              
      
-        if (nSelg > 0) 
-        {  
         
-         for (index in 1:nSelg)
-         {                   
-           levelg<-paste0("index<-",index) 
-           line<-paste0(line,levelg,"\n") 
-           clabel  <- input[[paste0("g",indLayer)]][index]             
-           datsumm <- datsumm %>% group_by(g)                       
-           line <- paste0(line,'datsumm <- datsumm %>% group_by(g)','\n')    
-                          
-         }
-               
-        }                                   
+                                        
      
         if (nSel > 0)
         {  
          
           
          for (index in 1:nSel)   
-         {  
-           vartemp <- paste0("f",indLayer)
-           clabel <- paste0(input[[vartemp]][index],"-")
-           clabel2 <- paste0(clabel,vartemp) 
-           levelf<-paste0("index<-",index) 
-           line<-paste0(line,levelf,"\n") 
-           line <- paste0(line,'clabel2 <- paste0(paste0(input[[paste0("f",indLayer)]][index],"-"),paste0("f",indLayer))','\n')                          
+         { 
+          vartemp <- paste0("f",indLayer)
+          if (index > 1)
+          {
+           vartemp <- paste0(vartemp,index)
+          } 
+          vartemp1 <- paste0("ff",index) 
+       
+          if (!is.null(input[[vartemp1]]))
+          {
+           
+           clabel <- paste0(input[[vartemp]][index],"-")                           
            cols <- vdata %>% names() 
-           line <- paste0(line,'cols <- vdata %>% names()','\n')                      
-           filcol <- cols[index+2] 
-           line <- paste0(line,'filcol <- cols[index+2]','\n')  
-           #line <- paste0(line,'vdata %>% names()[index+2]','\n')
-                                              
-           datsumm   <-  datsumm %>% filter(UQ(as.name(filcol)) %in% eval(input_select(choices=unique(vdata[[index+2]]),multiple=TRUE,selected=vdata[[index+2]],label=clabel2)))
-           line <- paste0(line,'datsumm <- datsumm %>% filter(UQ(as.name(filcol)) %in% eval(input_select(choices=unique(vdata[[index+2]]),multiple=TRUE,selected=vdata[[index+2]],label=clabel2)))','\n')               
-                                                             
+                                
+           filcol <- cols[index+4]                                              
+           filters <- quote(eval(as.name(filcol)) %in% input[[vartemp1]])
+           #vdata  <- appl_filter(vdata,filters,index,input,indLayer)
+           #sfilter_ <- rlang::parse_expr(filters) 
+           vdata <- vdata %>% dplyr::filter(!!filters)
+           
+          }                                                                    
          }
 
         }
 
        
        
-       if (any(input[[paste0("oVariable",indLayer)]] == "Size") && has_Size(graph)) 
+       if (any(input[[paste0("oVariable",indLayer)]] == "Size"))  
        {
         
         tsize=input[[paste0("Size",indLayer)]]
-        datsumm <- datsumm %>% group_by(Size)
-        line <- paste0(line,'datsumm <- datsumm %>% group_by(Size)','\n') 
-        datsumm <- datsumm %>% add_props(size=~Size)
-        line <- paste0(line,'datsumm <- datsumm %>% add_props(fill=~factor(Size))','\n')
-        if (any(input$filter4Variable != 'Remove Legend Size')) 
-        {  
-         datsumm <- datsumm %>% add_legend("size",title=tsize)
-         line <- paste0(line,'datsumm <- datsumm %>% add_legend("size",title=input[[paste0("Size",indLayer)]])','\n')   
-        } else
-        {
-         datsumm <- datsumm %>% hide_legend("size")
-         line <- paste0(line,'datsumm <- datsumm %>% hide_legend("size")','\n')
-        } 
-       } 
-  
-       if (any(input[[paste0("oVariable",indLayer)]] == "Shape") && has_Shape(graph)) 
-
+        datsumm <- datsumm + aes(size=Size)
+       }
+        
+       if (any(input[[paste0("oVariable",indLayer)]] == "Shape")) 
        {
         
-        tshape=input[[paste0("Shape",indLayer)]]  
-        datsumm <- datsumm %>% add_props(shape=~factor(Shape))
-        line <- paste0(line,'datsumm <- datsumm %>% add_props(shape=~factor(Shape))','\n') 
-        if (any(input$filter4Variable != 'Remove Legend Shape')) 
-        {  
-         datsumm <- datsumm %>% add_legend("shape",orient='left',title=tshape)
-         line <- paste0(line,'datsumm <- datsumm %>% add_legend("shape",orient="left",title=input[[paste0("Shape",indLayer)]])','\n')    
-        } else
-        {
-         datsumm <- datsumm %>% hide_legend("shape")
-         line <- paste0(line,'datsumm <- datsumm %>% hide_legend("shape")','\n')
-        }   
-        
+        datsumm <- datsumm + aes(shape=Shape)
            
        }
 
       
-       if (any(input[[paste0("oVariable",indLayer)]] == "Color")  && has_Color(graph))
+       if (any(input[[paste0("oVariable",indLayer)]] == "Color")) 
        {
-        #nColor <-length(input[[paste0("Color",indLayer)]])
        
-         
-         tfill=input[[paste0("Color",indLayer)]]
-         
-         datsumm <- datsumm %>% group_by(Color) 
-         line <- paste0(line,'datsumm <- datsumm %>% group_by(Color)','\n') 
-         datsumm <- datsumm %>% add_props(fill=~factor(Color)) 
-         line <- paste0(line,'datsumm <- datsumm %>% add_props(fill=~factor(Color))','\n') 
-          
-         if (any(input$filter4Variable == 'Remove Legend Color')) 
-         {  
-            datsumm <- datsumm %>% hide_legend("fill") 
-            line <- paste0(line,'datsumm <- datsumm %>% hide_legend("fill")','\n')   
-           } else
-           {
-                 
-             datsumm <- datsumm %>% add_legend("fill",orient='left',title=tfill) 
-             line <- paste0(line,'datsumm <- datsumm %>% add_legend("fill",orient="left",title=input[[paste0("Color",indLayer)]])','\n')   
-          }          
+         datsumm <- datsumm + aes(color=Color)   
           
         } 
      
-       if (any(input[[paste0("oVariable",indLayer)]] == "Stroke") && has_Stroke(graph))
+       if (any(input[[paste0("oVariable",indLayer)]] == "Stroke")) 
        {
-        tfill=input[[paste0("Stroke",indLayer)]] 
-        
-        datsumm <- datsumm %>% add_props(stroke=~factor(Stroke),strokeWidth:=input_slider(1,5,value=2,step=1,label='Width')) 
-        line <- paste0(line,'datsumm <- datsumm %>% add_props(stroke=~factor(Stroke),strokeWidth:=input_slider(1,5,value=2,step=1,label="Width"))','\n')
-         datsumm <- datsumm %>% group_by(Stroke) 
-         line <- paste0(line,'datsumm <- datsumm %>% group_by(Stroke)','\n') 
-         if (any(input$filter4Variable == 'Remove Legend Stroke')) 
-         {  
-          datsumm <- datsumm %>% hide_legend("stroke") 
-          line <- paste0(line,'datsumm <- datsumm %>% hide_legend("stroke")','\n')     
-         } else
-         {
-          datsumm <- datsumm %>% add_legend("stroke",orient='right',title=tfill)
-          line <- paste0(line,'datsumm <- datsumm %>% add_legend("stroke",orient="right",title=input[[paste0("Stroke",indLayer)]])','\n')  
-         }
+      
+        datsumm <- datsumm + aes(stroke=Stroke)
        }       
        
        
@@ -282,57 +245,120 @@ library(reshape2)
        } 
  
     
-     zoom_brush = function(items, session, page_loc, plot_loc, ...) {
-       show_tooltip(session, page_loc$r + 5, page_loc$t, html = nrow(items))
-       }
-       
-     
+   
 
+      if (input$gVariable[indLayer] == 'Points')
+      {
+        datsumm <- datsumm + geom_point(data=vdata,aes(x = x,y=y),stat="identity",position="identity",alpha=input$alpha.val.points,size=input$size.points)  
+        datsumm <- datsumm+ xlab(input[[paste0("x",indLayer)]]) + ylab(input[[paste0("y",indLayer)]]) 
+       if (any(input$aVariable == 'Regresion'))
+       {
+        datsumm <- datsumm + geom_smooth(data=vdata,aes(x = x,y=y),method="lm")
+       }  
+       #if (input$checkJitter)
+       #{
+       # datsumm <- datsumm + geom_jitter(alpha = 0.3, color = "tomato")
+       #}       
+       if (nSelg > 0) 
+       {                   
+           
+           datsumm <- datsumm + geom_path(data=vdata,aes(x=x,y=y,group=g))                       
+            
+                          
+                
+        }        
+      } else if (input$gVariable[indLayer] == 'Boxplot') 
+      {
+        if (any(input$aVariable=='2way Anova'))
+        {
+         vdata$xFacet <- interaction(vdata$x, vdata$Facet)
+         datsumm <- datsumm + geom_boxplot(data=vdata,aes(x = xFacet,y=y),alpha=input$alpha.val.Box)
+        } else
+        {
+         
+         datsumm <- datsumm + geom_boxplot(data=vdata,aes(x = x,y=y),alpha=input$alpha.val.Box)
+        }
+        datsumm <- datsumm+ xlab(input[[paste0("x",indLayer)]]) + ylab(input[[paste0("y",indLayer)]])
+      } else if (input$gVariable[indLayer] == 'Violin')
+      {
+        datsumm <- datsumm + geom_violin(data=vdata,aes(x = x,y=y),alpha=input$alpha.val.Violin) 
+        datsumm <- datsumm+ xlab(input[[paste0("x",indLayer)]]) + ylab(input[[paste0("y",indLayer)]])
+      } else if (input$gVariable[indLayer] == 'Regresion')
+      {
+        datsumm <- datsumm + geom_point(data=vdata,aes(x = x,y=y),stat="identity",position="identity",alpha=input$alpha.val.points,size=input$size.points) 
+        datsumm <- datsumm + geom_smooth(data=vdata,aes(x = x,y=y),method="lm") 
+        datsumm <- datsumm+ xlab(input[[paste0("x",indLayer)]]) + ylab(input[[paste0("y",indLayer)]])
+      } else if (input$gVariable[indLayer] == "Histogram") 
+      {
         
-       #datsumm_new <- reactive({
-       #print('pasa')
-       # print(domains[["x"]][1]) 
-        ##domains[["x"]][1] <-0
-            ##domains[["x"]][2] <-7500
+        datsumm <- datsumm + geom_histogram(data=vdata,aes(x = x),stat='count',bins= input$bins.val,alpha=input$alpha.val.his)
+        datsumm <- datsumm + xlab(input[[paste0("x",indLayer)]])
+        if (input$checkInter)
+        {
+          datsumm <- datsumm + geom_vline(xintercept = mean(vdata$x), color = "red")
+        } 
+      } else if (input$gVariable[indLayer] == "Density")
+      {
+        datsumm <- datsumm + geom_density2d(data=vdata,aes(x = x, y=y),h=0.5,bins=60,alpha=input$alpha.val.density)
+      
+      } else if (substr(input$gVariable[indLayer],1,5) == "Lines")
+      {
+        datsumm <- datsumm + geom_line(data=vdata,aes(x = x,y=y,linetype=g),color=input$lColor,size=input$size.lines)
+        datsumm <- datsumm+ xlab(input[[paste0("x",indLayer)]]) + ylab(input[[paste0("y",indLayer)]])
 
-    #   if (anyNA(domains$x))
-     #   datsumm
-     #  else
-     #  {
-        
-      #  datsumm[datsumm$x >= domains[["x"]][1] & datsumm$x <= domains[["x"]][2]]
-      #  print('pasa2')
-        
-       #} 
-       #})
+      } else if  (substr(input$gVariable[indLayer],1,5) == "Polar")
+      {
+        datsumm <- datsumm + geom_bar(data=vdata,aes(x = x,y=y),stat="identity") + coord_polar()
+        datsumm <- datsumm+ xlab("") + ylab("")
+      } else if (input$gVariable[indLayer] == 'Facet.Wrap')
+      {
+         datsumm <- datsumm + facet_wrap( ~Facet)
+      } else if (input$gVariable[indLayer] == 'Facet.Grid')
+      {
+         datsumm <- datsumm + facet_grid( ~Facet)
+      } 
+      
        
       
-      listTitle[my_i,1] <- input[[paste0("x",indLayer)]]    
-      listTitle[my_i,2] <- input[[paste0("y",indLayer)]]
-
-       
-       
-      datsumm <- datsumm %>% layer_generic(graph,vdata,indLayer,input,session) %>%                         	     
-      set_options(width="auto",height="auto",resizable=TRUE) %>% 
+      datsumm <- datsumm + coord_cartesian(xlim = ranges$x, ylim = ranges$y, expand = FALSE)                 	     
       
-      handle_brush(function(items, session, page_loc, plot_loc, ...) {show_tooltip(session, page_loc$r + 5, page_loc$t, html = nrow(items))  }) %>% add_tooltip(tooltip_hover,"hover")   
-       
-      line <- paste0(line,'datsumm <- datsumm %>% layer_generic(graph,vdata,indLayer,input,session) %>%set_options(width="auto",height="auto",resizable=TRUE) %>% handle_brush(function(items, session, page_loc, plot_loc, ...) {show_tooltip(session, page_loc$r + 5, page_loc$t, html = nrow(items))}) %>% add_tooltip(tooltip_hover,"hover")','\n')
+      ###p <- switch(input$ggplot_scaletype,
+      ###    normal =
+      ###      pc,
+      ###    reverse =
+      ###      pc + scale_x_reverse() + scale_y_reverse(),
+      ###    log10 =
+      ###      pc + scale_x_log10() + scale_y_log10(),
+      ###    log2 =
+      ###      pc + scale_x_continuous(trans = scales::log2_trans()) +
+      ###           scale_y_continuous(trans = scales::log2_trans()),
+      ###    log10_trans =
+      ###      pc + coord_trans(x = "log10", y = "log10"),
+      ###    log2_trans =
+      ###      pc + coord_trans(x = "log2", y = "log2"),
+      ###    coord_cartesian =
+      ###      pc + coord_cartesian(xlim = c(2,4), ylim = c(0,50)),
+      ###    coord_flip =
+      ###      pc + coord_flip(),
+      ###    coord_fixed =
+      ###      pc + coord_fixed(),
+      ###    coord_polar =
+      ###      pc + coord_polar(),
+          # Discrete x, continuous y
+      ###    x_factor =
+      ###      pc,
+          # Datetime x, Date y
+      ###    datetime =
+      ###      pc
+      ###  )       
 
-      datsumm <- datsumm %>% add_axis("x",title = listTitle[my_i,1]) %>%
-                             add_axis("y",title = listTitle[my_i,2]) 
-                                  
-      line <- paste0(line,'datsumm <- datsumm %>% add_axis("x",title = input[[paste0("x",indLayer)]] ) %>%
-                             add_axis("y",title = input[[paste0("y",indLayer)]] )','\n')
- 
-      if (any(input$filter4Variable == "Logaritmic X") && indLayer == 1)
+
+      if (any(input$filter4Variable == "Logaritmic X"))
       {
-         datsumm <- datsumm %>% scale_numeric("x",trans="log", expand=0)
-         line <- paste0(line,'datsumm <- datsumm %>% scale_numeric("x",trans="log", expand=0)','\n')
-      } else if (any(input$filter4Variable == "Logaritmic Y") && indLayer == 1)
+         datsumm <- datsumm + scale_x_log10()
+      } else if (any(input$filter4Variable == "Logaritmic Y"))
       {
-         datsumm <- datsumm %>% scale_numeric("y",trans="log", expand=0)
-         line <- paste0(line,'datsumm <- datsumm %>% scale_numeric("y",trans="log", expand=0)','\n') 
+         datsumm <- datsumm + scale_y_log10()
       } else if (any(input$filter4Variable == "zero in X") && indLayer == 1)
       {
          datsumm <- datsumm %>% scale_numeric("x",domain=c(0,NA))
@@ -343,8 +369,9 @@ library(reshape2)
          line <- paste0(line,'datsumm <- datsumm %>% scale_numeric("y",domain=c(NA,0))','\n')
       } else if (any(input$filter4Variable == "Banking 45"))
       {
-         datsumm <- datsumm %>% set_options(width=400, height=600, keep_aspect=TRUE)
-         line <- paste0(line,'datsumm <- datsumm %>% set_options(width=400, height=600, keep_aspect=TRUE)','\n')
+         ratio <- bank_slopes(vdata$x, vdata$y,method="as")
+         datsumm <- datsumm + coord_fixed(ratio = ratio)
+        
       } else if (any(input$filter4Variable == "Aspect Ratio Auto"))
       {
          datsumm <- datsumm %>% set_options(width="auto",height="auto",resizable=TRUE)
@@ -353,43 +380,46 @@ library(reshape2)
              
       plotDataHis[[indLayer]] <- datsumm
       vDataF[[indLayer]] <- vdata
-      line <- paste0(line,'vDataF[[indLayer]] <- vdata ','\n')
+      
      }
 
     
 
        
-
+ 
      } #  second for 
       
       # Show PLot and Table/Summary
-  
+       
       if (!is.null(vdata))
       {
 
-        
-        datsumm %>% bind_shiny(plotname,controls_id="p_ui")  
-    
-        line<-paste0(line,'datsumm %>% bind_shiny(plotname,controls_id="p_ui")','\n')       
-        updateDataTable(input,output,vDataF,datsumm)
-        
-        line<-paste0(line,"updateDataTable(input,output,vDataF,datsumm)",'\n')
-        updateAnalisys(graph,input,output,datsumm,dataS,indLayer)
-        
-        line<-paste0(line,"updateAnalisys(graph,input,output,datsumm,dataS,indLayer)",'\n') 
-         
-        #if (input$ace == "")
-        #{  
-        updateAceEditor(session,'ace',mode='r',value=line)
-         
-        #}
-        
+        plotDataHis[[my_i]] <- datsumm
+        output[[plotname]]  <- renderPlot({ 
+         #tabsetPanel(                       
+             #tabPanel("Plots",
+              # renderPlot({
+                 datsumm
+           #})  
+## ))
+        })        
        
+        
+        ###print(vDataF)    
+        updateDataTable(input,output,vDataF,datsumm)
+        updateAnalisys(graph,input,output,datsumm,vDataF,indLayer,session,line)
+        
+        
+        
     #}       
        } 
      
     
-    } 
+    } else
+    {
+       
+       #
+    }  
  # end if control  
     
 # Analytics by default

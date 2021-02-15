@@ -3,13 +3,14 @@ library(ggvis)
 library(shiny)
 library(dplyr)
 library(ggplot2) 
-library(dbConnect)
+library(DBI)
 library(shinyjs)
 library(lazyeval)
 library(shinyAce)
 library(knitr)
 library(tidyr)
 library(corrplot)
+library(ggraph)
 
  #dm <- dropdownMenu(type="messages")
   mm <- dropdownMenu(type="notifications")
@@ -18,7 +19,9 @@ library(corrplot)
   sm <- sidebarMenu(id="tabs", 
   menuItem( 
     text="Set Up",startExpanded = TRUE,icon=icon("dashboard"),
-    menuSubItem(text="Plot",tabName="Plot",icon=icon("bar-chart-o")),
+    menuSubItem(text="Source",tabName="Source"),
+    menuSubItem(text="Plots",tabName="Plots",icon=icon("bar-chart-o")),
+    menuSubItem(text="Analytics",tabName="Analytics",icon=icon("bar-chart-o")),
     menuSubItem(text="Other Variables",icon=icon("th"),tabName="Variables"),
     menuSubItem(text="NPlots",tabName="NPlots",icon=icon("line-chart")),
     menuSubItem(text="Operator",tabName="Operator",icon=icon("users")),
@@ -35,12 +38,23 @@ ui <- dashboardPage(
    
     tabItems(
     tabItem(
-      tabName="Plot",
+     tabName="Source",
+     fluidPage(
+       useShinyjs(),
+       fluidRow(
+         uiOutput("dNumber"),
+         uiOutput("dSource"),
+         uiOutput("xSource") 
+     )
+     ) 
+    ),
+    tabItem(
+      tabName="Plots",
 
       fluidPage(
        useShinyjs(),
        fluidRow(
-         selectInput("gVariable", "Plot:",
+         selectInput("gVariable", "Plots:",
                   choices = names(dat.moodle1),
                   multiple = TRUE,
                   selected = "Points")
@@ -50,6 +64,24 @@ ui <- dashboardPage(
        )
       )
     ),
+
+    tabItem(
+      tabName="Analytics",
+
+      fluidPage(
+       useShinyjs(),
+       fluidRow(
+         selectInput("aVariable", "Analytics:",
+                  c("n","Regresion","1way Anova","2way Anova","Correlation","Segmentation"),
+                  multiple= FALSE, 
+                  selected = "1")   
+    
+           
+    
+       )
+      )
+    ),
+
     tabItem(
       tabName="Variables",
 
@@ -58,7 +90,9 @@ ui <- dashboardPage(
        fluidRow(
         uiOutput("oSource")
        )
-      )
+       
+     )
+      
     ), 
     tabItem(
        tabName="NPlots",
@@ -106,7 +140,7 @@ ui <- dashboardPage(
        fluidRow(
         
       selectInput("filter3Variable", "View:",
-                  c("Summarize","Table"),
+                  c("Table","Summarize"),
                   selected = "1")                
        )
       )
@@ -133,8 +167,7 @@ ui <- dashboardPage(
        useShinyjs(),
        fluidRow(
          selectInput("filter4Variable", "Guidelines:",
-                  c("n","Logaritmic X","Logaritmic Y","Remove Legend Color","Remove Legend Size","Remove Legend Stroke","Remove Legend Shape","zero in X","zero in Y","Rate of Change",
-                    "Banking 45","Aspect Ratio Auto"),
+                  c("n","Logaritmic X","Logaritmic Y","Banking 45"),
                   multiple = TRUE,  
                   selected = "n")
     
@@ -147,81 +180,84 @@ ui <- dashboardPage(
   ),
   dashboardBody(
 
-     
-
      fluidRow(
-     useShinyjs(),
-     box(width = 12,collapsible=TRUE,
-     box(width = 3,
-     uiOutput("dNumber")), 
-     box(width = 3,
-     uiOutput("dSource")),
-     box(width = 3,
-     uiOutput("xSource"))),     
-     
+      useShinyjs(),    
+       
+      box(width = 20 ,collapsible=TRUE,
+       splitLayout(cellArgs = list(style = "padding: 10px"),
+      
+      uiOutput("Size"),
+      uiOutput("Color"),
+
+      uiOutput("Stroke"), 
+      uiOutput("Shape"),
+
+      uiOutput("Text"),
+
+      
+      uiOutput("fSource"),
+      uiOutput("gSource")
+  
+
+     )
+     )),
 
      
-     box(width = 3,collapsible=TRUE,  
-     box(width = 6,uiOutput("xAxes")),
-     box(width = 6, 
-     uiOutput("yAxes"))),
-     
-     box(width = 6,collapsible=TRUE, 
-     box(width = 3,
-     uiOutput("Size")),
-     box(width = 3,
-     uiOutput("Color")),
-     box(width = 2,
-     uiOutput("Stroke")), 
-     box(width = 2,
-     uiOutput("Shape")),
-     box(width = 2,
-     uiOutput("Text"))),
-     
-     box(width = 3,collapsible=TRUE, 
-     box(width = 5,
-     uiOutput("fSource")),
-     box(width = 5,
-     uiOutput("gSource")))),
-        
-      
      fluidRow(
       useShinyjs(),
-      box(width = 2,
-       splitLayout(cellWidths = c("100%"),
-       uiOutput("p_ui"))),
-
-      box(width = 7,
-       splitLayout(cellWidths = c("100%"),
-        uiOutput("plots"))),
-
-      box(width = 3,
-       splitLayout(cellWidths = c("100%"),
-        uiOutput('mytabs')))),
-
-      fluidRow(
-      useShinyjs(), 
-      box(width = 10,collapsible=TRUE,
-       plotOutput("plot2"))),
       
+      box(width = 8,collapsible=TRUE,
+      splitLayout(cellWidths = c("100%"),
+      tabsetPanel(id="tabs2",
+                  type = "pills",
+                  tabPanel("Plots", uiOutput("plots")),
+                  tabPanel("Analytics", uiOutput("plots2")),
+                  tabPanel("Data", uiOutput("summary"))
+                  #tabPanel("Editor", htmlOutput("knitDoc"))
+                  #tabPanel("Controls",uiOutput("p_ui"))
+                   
+        )
+       )),
 
-     fluidRow(
+                     
+      box(width = 4,
+      splitLayout(cellArgs = list(style = "padding: 10px"), 
+      uiOutput("xAxes"),
+      uiOutput("yAxes"),
+      uiOutput("Facetx"),
+      uiOutput("Factor2")
+      )),
+      
+      box(width = 4,collapsible=TRUE,
         bootstrapPage(
         div( 
         class="container-fluid",
         div(class="row-fluid",
         div(class="span6",             
-         aceEditor("ace",value='')
+         aceEditor("ace",mode="markdown",value='')
          ,actionButton("eval", "Update")
         )
-        ,
-        div(class="span6",            
-           htmlOutput("knitDoc")
-        )
+        #,
+        #div(class="span6",            
+        #   htmlOutput("knitDoc")
+        #)
     
         ))
       )
-     )
+     ),
+
+      box(width = 2,
+      splitLayout(cellArgs = list(style = "padding: 10px"), 
+      uiOutput("p_ui"))),
+
+       
+      box(width = 2,
+      splitLayout(cellArgs = list(style = "padding: 10px"),
+      uiOutput("p_uif")))
+     )   
+      
+
+     
     ) 
    
     )

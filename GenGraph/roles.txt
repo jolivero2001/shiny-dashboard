@@ -1,0 +1,63 @@
+SELECT mdl_course.fullname, mdl_role_assignments.username, mdl_role.shortname FROM mdl_course, mdl_role
+
+INNER JOIN mdl_context ON mdl_context.instanceid = mdl_course.id
+
+INNER JOIN mdl_role_assignments ON mdl_context.id = mdl_role_assignments.contextid
+
+INNER JOIN mdl_role ON mdl_role.id = mdl_role_assignments.roleid
+
+
+SELECT DISTINCT mdl_course.fullname, mdl_context.instanceid,mdl_context.contextlevel FROM mdl_course
+INNER JOIN mdl_context ON mdl_context.instanceid = mdl_course.id
+
+
+alumnos por cada curso:
+
+SELECT mdl_course.fullname, count(*) numusuarios FROM mdl_course
+
+INNER JOIN mdl_context ON mdl_context.instanceid = mdl_course.id
+
+INNER JOIN mdl_role_assignments ON mdl_context.id = mdl_role_assignments.contextid
+
+INNER JOIN mdl_role ON mdl_role.id = mdl_role_assignments.roleid
+
+INNER JOIN mdl_user ON mdl_user.id = mdl_role_assignments.userid
+
+WHERE mdl_role.id = 5
+
+GROUP BY mdl_course.fullname
+
+
+SELECT mdl_user.username, mdl_user.firstname, mdl_user.lastname FROM mdl_course
+
+INNER JOIN mdl_context ON mdl_context.instanceid = mdl_course.id
+
+INNER JOIN mdl_role_assignments ON mdl_context.id = mdl_role_assignments.contextid
+
+INNER JOIN mdl_role ON mdl_role.id = mdl_role_assignments.roleid
+
+INNER JOIN mdl_user ON mdl_user.id = mdl_role_assignments.userid
+
+GROUP BY mdl_course.fullname
+
+
+SELECT mdl_course.id, mdl_context.id, mdl_role.shortname, mdl_user.username, mdl_user.firstname, mdl_user.lastname FROM mdl_course
+
+INNER JOIN mdl_context ON mdl_context.instanceid = mdl_course.id
+
+INNER JOIN mdl_role_assignments ON mdl_context.id = mdl_role_assignments.contextid
+
+INNER JOIN mdl_role ON mdl_role.id = mdl_role_assignments.roleid
+
+INNER JOIN mdl_user ON mdl_user.id = mdl_role_assignments.userid
+
+
+SELECT mdl_course.id, mdl_context.contextlevel, mdl_course.fullname FROM mdl_course
+
+INNER JOIN mdl_context ON mdl_context.instanceid = mdl_course.id
+INNER JOIN mdl_role_assignments ON mdl_context.id = mdl_role_assignments.contextid
+
++++++++++++++
+
+
++++++++++++++
