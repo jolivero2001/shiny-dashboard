@@ -14,15 +14,34 @@ library(reshape2)
 library(ggraph)
 library(data.tree)
 library(manipulate)
+library(httr)
 
   source("functions.R")
   source("functionsRender.R")
-  
+  #source("oauth.R") 
  
 
  server <- function(input, output,session) 
 {
 
+# params <- parseQueryString(isolate(session$clientData$url_search))
+ # if (!has_auth_code(params)) {
+ #   return()
+ # }  
+
+ # Manually create a token
+#  token <- oauth2.0_token(
+#    app = app,
+#    endpoint = api,
+#    credentials = oauth2.0_access_token(api, app, params$code),
+#    cache = FALSE
+#  )
+
+#  resp <- GET("https://api.github.com/user", config(token = token))
+  # TODO: check for success/failure here
+
+  output$code <- renderText(content(resp, "text"))
+  
   ###domains <- reactiveValues(x = c(NA,NA),y = c(NA,NA))
     
  ####lb <- linked_brush(keys = NULL, "blue")  
@@ -115,7 +134,8 @@ library(manipulate)
         } 
 
         if (!is.analytics(input$gVariable[indLayer]))
-        {   
+        {  
+         print(input$gVariable[indLayer]) 
          vdata<-plotDataGeneric(input[[paste0("x",indLayer)]],input[[paste0("y",indLayer)]],input[[paste0("f",indLayer)]],input[[paste0("g",indLayer)]],input[[paste0("Color",indLayer)]],input[[paste0("Size",indLayer)]],input[[paste0("Stroke",indLayer)]],input[[paste0("Shape",indLayer)]],input[[paste0("Text",indLayer)]],input,dataS,indLayer)
 ##
          line<-paste0(line,'vdata<-plotDataGeneric(input[[paste0("x",indLayer)]],input[[paste0("y",indLayer)]],input[[paste0("f",indLayer)]],input[[paste0("g",indLayer)]],input[[paste0("Color",indLayer)]],input[[paste0("Size",indLayer)]],input[[paste0("Stroke",indLayer)]],input[[paste0("Shape",indLayer)]],input[[paste0("Text",indLayer)]],input,dataS,indLayer)','\n')
@@ -132,7 +152,7 @@ library(manipulate)
         {
          ####datsumm <- datsumm %>% add_props(inherit=FALSE)
          line<- paste0(line,"datsumm <- datsumm %>% add_props(inherit=FALSE)","\n")
-# control countables
+# co   ntrol countables
          if (is.numeric(vDataF[[indLayer-1]]$x) && !is.numeric(vdata$x))
          {
           vdata$x <- as.numeric(as.character(vdata$x))  

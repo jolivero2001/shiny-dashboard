@@ -625,10 +625,11 @@ dataSource = function(indLayer,Level,input)
   {
    if (indLayer == 1)
    { 
-    inputFacet <- inputx
+     inputFacet <- inputx
    } else
    {
-    inputFacet <- input[[paste0("Facet",indLayer-1)]]
+    ###inputFacet <- input[[paste0("Facet",indLayer-1)]]
+    inputFacet <- inputx
    } 
   } 
 
@@ -643,7 +644,7 @@ dataSource = function(indLayer,Level,input)
         
     
     df <- subset(dataS, select = c(inputx,inputy,inputFacet,inputFactor2,inputf,inputgr))
-      
+       
     
     names(df) <- c("x","y","Facet","Factor2","f","g")
 
@@ -781,11 +782,13 @@ dataSource = function(indLayer,Level,input)
        df$x <- df$x + jx
        df$y <- df$y + jy 
       }          
-    }   
-     
-    
+    }
+   
+    print(indLayer) 
+    print(df)
    
     return(df)
+    
     
    }
   }  

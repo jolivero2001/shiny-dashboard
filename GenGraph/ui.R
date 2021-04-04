@@ -19,7 +19,6 @@ library(ggraph)
   sm <- sidebarMenu(id="tabs", 
   menuItem( 
     text="Set Up",startExpanded = TRUE,icon=icon("dashboard"),
-    menuSubItem(text="Source",tabName="Source"),
     menuSubItem(text="Plots",tabName="Plots",icon=icon("bar-chart-o")),
     menuSubItem(text="Analytics",tabName="Analytics",icon=icon("bar-chart-o")),
     menuSubItem(text="Other Variables",icon=icon("th"),tabName="Variables"),
@@ -37,17 +36,6 @@ ui <- dashboardPage(
   dashboardSidebar(sm,
    
     tabItems(
-    tabItem(
-     tabName="Source",
-     fluidPage(
-       useShinyjs(),
-       fluidRow(
-         uiOutput("dNumber"),
-         uiOutput("dSource"),
-         uiOutput("xSource") 
-     )
-     ) 
-    ),
     tabItem(
       tabName="Plots",
 
@@ -244,7 +232,10 @@ ui <- dashboardPage(
     
         ))
       )
-     ),
+     )),
+
+     fluidRow(
+      useShinyjs(),
 
       box(width = 2,
       splitLayout(cellArgs = list(style = "padding: 10px"), 
