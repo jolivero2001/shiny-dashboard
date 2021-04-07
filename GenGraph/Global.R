@@ -55,7 +55,7 @@ options(max.print=1000000)
 listTitle <- matrix(NA,nrow=20,ncol=20,byrow=TRUE)
 
 
-      conn <- dbConnect(drv = RMySQL::MySQL(),dbname = "bitnami_moodle",host = "localhost",
+      conn <- dbConnect(drv = RMySQL::MySQL(),dbname = "bitnami_moodle",host = "192.168.99.1",
                     username = "root")
 
       #on.exit(dbDisconnect(conn), add = TRUE)
