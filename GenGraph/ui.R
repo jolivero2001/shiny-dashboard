@@ -170,9 +170,18 @@ ui <- dashboardPage(
 
      fluidRow(
       useShinyjs(),    
-       
-      box(width = 20 ,collapsible=TRUE,
+       box(width = 20,collapsible=TRUE,
        splitLayout(cellArgs = list(style = "padding: 10px"),
+     #box(width = 3,
+     uiOutput("dNumber"), 
+     #box(width = 3,
+     uiOutput("dSource"),
+     #box(width = 3,
+     uiOutput("xSource"),     
+     
+    
+      #box(width = 20 ,collapsible=TRUE,
+       #splitLayout(cellArgs = list(style = "padding: 10px"),
       
       uiOutput("Size"),
       uiOutput("Color"),
@@ -190,12 +199,21 @@ ui <- dashboardPage(
      )
      )),
 
+
      
-     fluidRow(
-      useShinyjs(),
       
-      box(width = 8,collapsible=TRUE,
+      fluidRow(
+      useShinyjs(),
+
+      box(width = 2,collapsible=TRUE,
+      splitLayout(cellArgs = list(style = "padding: 10px"),
+      
+      uiOutput("p_ui"),
+      uiOutput("p_uif"))),
+
+      box(width = 7,collapsible=TRUE,
       splitLayout(cellWidths = c("100%"),
+
       tabsetPanel(id="tabs2",
                   type = "pills",
                   tabPanel("Plots", uiOutput("plots")),
@@ -208,7 +226,7 @@ ui <- dashboardPage(
        )),
 
                      
-      box(width = 4,
+      box(width = 3,
       splitLayout(cellArgs = list(style = "padding: 10px"), 
       uiOutput("xAxes"),
       uiOutput("yAxes"),
@@ -216,7 +234,7 @@ ui <- dashboardPage(
       uiOutput("Factor2")
       )),
       
-      box(width = 4,collapsible=TRUE,
+      box(width = 3,collapsible=TRUE,
         bootstrapPage(
         div( 
         class="container-fluid",
@@ -232,20 +250,9 @@ ui <- dashboardPage(
     
         ))
       )
-     )),
+     ))
 
-     fluidRow(
-      useShinyjs(),
-
-      box(width = 2,
-      splitLayout(cellArgs = list(style = "padding: 10px"), 
-      uiOutput("p_ui"))),
-
-       
-      box(width = 2,
-      splitLayout(cellArgs = list(style = "padding: 10px"),
-      uiOutput("p_uif")))
-     )   
+     
       
 
      
